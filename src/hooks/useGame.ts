@@ -141,14 +141,14 @@ export function useGame() {
         }
       }
 
-      // After 130ms (animation slide duration), purge deleted tiles and release lock
+      // After 145ms (animation slide duration), purge deleted tiles and release lock
       if (animationTimerRef.current) {
         window.clearTimeout(animationTimerRef.current);
       }
       animationTimerRef.current = window.setTimeout(() => {
         setTiles((prev) => purgeDeletedTiles(prev));
         isAnimatingRef.current = false;
-      }, 130);
+      }, 210);
     },
     [tiles, status, wonAcknowledged, nextId, score, addScorePopup]
   );

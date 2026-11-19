@@ -26,15 +26,18 @@ export const TileView: React.FC<TileViewProps> = memo(({ tile }) => {
     ? 'tile-deleted'
     : '';
 
+  const positionClass = `tile-pos-${row}-${col}`;
+
   return (
     <div
-      className={`tile ${valueClass} ${fontScaleClass} ${animationClass}`}
-      style={
-        {
-          '--tile-row': row,
-          '--tile-col': col,
-        } as React.CSSProperties
-      }
+      className={`tile ${valueClass} ${fontScaleClass} ${animationClass} ${positionClass}`}
+      style={{
+        transform: `translate3d(
+          calc(var(--gap) + ${col} * (var(--cell-size) + var(--gap))),
+          calc(var(--gap) + ${row} * (var(--cell-size) + var(--gap))),
+          0
+        )`,
+      }}
       data-value={value}
       aria-label={`Tile ${value}`}
     >
