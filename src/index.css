@@ -380,7 +380,7 @@ html, body {
   pointer-events: none;
 }
 
-/* Core Tile Element */
+/* Core Tile Element - Exact play2048.co motion physics */
 .tile {
   position: absolute;
   top: 0;
@@ -394,7 +394,8 @@ html, body {
   user-select: none;
   font-weight: 800;
   z-index: 10;
-  transition: transform 200ms cubic-bezier(0.25, 1, 0.5, 1);
+  transition: 140ms ease-in-out;
+  transition-property: transform;
   will-change: transform;
 }
 
@@ -433,54 +434,51 @@ html, body {
   line-height: 1;
 }
 
-/* Spawn pop-in animation - timed cleanly right as sliding settles */
-.tile.tile-appear .tile-inner {
-  animation: tileSpawn 170ms 60ms cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-}
-
-@keyframes tileSpawn {
+/* Exact play2048.co: Newly spawned tile appear animation */
+@keyframes appear {
   0% {
     opacity: 0;
     transform: scale(0);
   }
-  60% {
-    opacity: 1;
-    transform: scale(1.12);
-  }
   100% {
     opacity: 1;
     transform: scale(1);
   }
 }
 
-/* Merge pulse animation - timed so sliding tiles arrive first */
-.tile.tile-pop {
+.tile.tile-appear .tile-inner,
+.tile.tile-new .tile-inner {
+  animation: appear 200ms ease 140ms;
+  animation-fill-mode: backwards;
+}
+
+/* Exact play2048.co: Merged tile pop bounce animation */
+@keyframes pop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.tile.tile-pop,
+.tile.tile-merged {
   z-index: 20;
 }
 
-.tile.tile-pop .tile-inner {
-  animation: tilePopBounce 180ms 60ms cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+.tile.tile-pop .tile-inner,
+.tile.tile-merged .tile-inner {
+  animation: pop 200ms ease 140ms;
+  animation-fill-mode: backwards;
 }
 
-@keyframes tilePopBounce {
-  0% {
-    opacity: 0.5;
-    transform: scale(0.65);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.18);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Merging tile sliding underneath before removal */
+/* Merging tile sliding underneath into position before removal */
 .tile.tile-deleted {
   z-index: 5;
-  opacity: 0.9;
 }
 
 /* Dynamic Font Sizes for Large Digits */
