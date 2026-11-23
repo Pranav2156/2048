@@ -18,26 +18,19 @@ export const TileView: React.FC<TileViewProps> = memo(({ tile }) => {
   else if (digits === 4) fontScaleClass = 'tile-font-sm';
   else if (digits >= 5) fontScaleClass = 'tile-font-xs';
 
-  const animationClass = isNew
-    ? 'tile-appear'
+  const statusClass = isNew
+    ? 'tile-new tile-appear'
     : isMerged
-    ? 'tile-pop'
+    ? 'tile-merged tile-pop'
     : deleted
     ? 'tile-deleted'
     : '';
 
-  const positionClass = `tile-pos-${row}-${col}`;
+  const positionClass = `tile-position-${row + 1}-${col + 1} tile-pos-${row}-${col}`;
 
   return (
     <div
-      className={`tile ${valueClass} ${fontScaleClass} ${animationClass} ${positionClass}`}
-      style={{
-        transform: `translate3d(
-          calc(var(--gap) + ${col} * (var(--cell-size) + var(--gap))),
-          calc(var(--gap) + ${row} * (var(--cell-size) + var(--gap))),
-          0
-        )`,
-      }}
+      className={`tile ${valueClass} ${fontScaleClass} ${positionClass} ${statusClass}`}
       data-value={value}
       aria-label={`Tile ${value}`}
     >

@@ -25,8 +25,6 @@ export function useGame() {
   const [scorePopups, setScorePopups] = useState<ScorePopup[]>([]);
   const [undoSnapshot, setUndoSnapshot] = useState<GameSnapshot | null>(null);
 
-  // Animation lock to ensure smooth 120ms sliding
-  const isAnimatingRef = useRef<boolean>(false);
   const animationTimerRef = useRef<number | null>(null);
 
   // Initialize board or restore from localStorage on mount
@@ -88,14 +86,24 @@ export function useGame() {
   // Execute a directional move
   const move = useCallback(
     (direction: Direction) => {
-      // Don't move if animating or game over
-      if (isAnimatingRef.current) return;
       if (status === 'GAME_OVER') return;
 
-      // Clean any remaining deleted tiles immediately before calculating next move
-      const currentCleanTiles = purgeDeletedTiles(tiles);
+      // Cancel any pending timer from the previous move immediately
+      if (animationTimerRef.current) {
+        window.clearTimeout(animationTimerRef.current);
+        animationTimerRef.current = null;
+      }
 
-      // Snapshot for undo
+      // Prior to calculating next move, clean up:
+      // Remove any remaining deleted tiles and clear previous turn's animation flags
+      const currentCleanTiles = tiles
+        .filter((t) => !t.deleted)
+        .map((t) => ({
+          ...t,
+          isNew: false,
+          isMerged: false,
+        }));
+
       const snapshot: GameSnapshot = {
         tiles: currentCleanTiles,
         score,
@@ -110,8 +118,6 @@ export function useGame() {
         return;
       }
 
-      // Lock animations for transition
-      isAnimatingRef.current = true;
       setUndoSnapshot(snapshot);
 
       // Sound and score
@@ -141,14 +147,13 @@ export function useGame() {
         }
       }
 
-      // After 140ms (matching slide duration), purge deleted tiles and release lock
-      if (animationTimerRef.current) {
-        window.clearTimeout(animationTimerRef.current);
-      }
+      // At exactly 100ms, sliding finishes:
+      // Remove ONLY the sliding deleted tiles. Crucially, do NOT reset isNew or isMerged here
+      // so their 200ms appear/pop animations continue playing smoothly to completion!
       animationTimerRef.current = window.setTimeout(() => {
-        setTiles((prev) => purgeDeletedTiles(prev));
-        isAnimatingRef.current = false;
-      }, 140);
+        setTiles((prev) => prev.filter((t) => !t.deleted));
+        animationTimerRef.current = null;
+      }, 100);
     },
     [tiles, status, wonAcknowledged, nextId, score, addScorePopup]
   );
@@ -163,8 +168,8 @@ export function useGame() {
   const restart = useCallback(() => {
     if (animationTimerRef.current) {
       window.clearTimeout(animationTimerRef.current);
+      animationTimerRef.current = null;
     }
-    isAnimatingRef.current = false;
     const initial = initBoard();
     setTiles(initial.tiles);
     setNextId(initial.nextId);
@@ -177,11 +182,11 @@ export function useGame() {
 
   // Undo move
   const undo = useCallback(() => {
-    if (!undoSnapshot || isAnimatingRef.current) return;
+    if (!undoSnapshot) return;
     if (animationTimerRef.current) {
       window.clearTimeout(animationTimerRef.current);
+      animationTimerRef.current = null;
     }
-    isAnimatingRef.current = false;
 
     setTiles(undoSnapshot.tiles);
     setScore(undoSnapshot.score);
