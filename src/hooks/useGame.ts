@@ -152,14 +152,14 @@ export function useGame() {
         }
       }
 
-      // Phase 2 (100ms): At impact, commit merged state seamlessly
+      // Phase 2 (180ms): At impact, commit merged state seamlessly
       // Absorbed tile is removed, destination tile smoothly upgrades to new value and swells
       // like water droplets combining without any blinking or disappearance!
       animationTimerRef.current = window.setTimeout(() => {
         setTiles(outcome.mergedTiles);
         pendingMergedTilesRef.current = null;
         animationTimerRef.current = null;
-      }, 100);
+      }, 180);
     },
     [tiles, status, wonAcknowledged, nextId, score, addScorePopup]
   );

@@ -212,13 +212,16 @@ export function executeMove(
     };
   }
 
-  // Spawn a new tile into the merged state
+  // Spawn a new tile into the merged state (Phase 2)
   const spawnRes = spawnRandomTile(mergedResult, nextId);
   if (spawnRes.tile) {
     mergedResult.push(spawnRes.tile);
-    slidingResult.push(spawnRes.tile);
     nextId = spawnRes.nextId;
   }
+
+  // Ensure stable ID ordering for both phases so React reconciler never scrambles DOM nodes
+  slidingResult.sort((a, b) => a.id - b.id);
+  mergedResult.sort((a, b) => a.id - b.id);
 
   return {
     moved: true,

@@ -14,6 +14,10 @@ export const Board: React.FC<BoardProps> = ({ tiles, onSwipe }) => {
   // 16 background grid slots
   const backgroundCells = Array.from({ length: 16 }, (_, i) => i);
 
+  // CRITICAL: Always sort tiles by tile.id so React never reorders DOM nodes via insertBefore.
+  // Reordering DOM nodes cancels active CSS transitions, causing tiles to instantly teleport!
+  const sortedTiles = [...tiles].sort((a, b) => a.id - b.id);
+
   return (
     <div
       className="board-container"
@@ -31,7 +35,7 @@ export const Board: React.FC<BoardProps> = ({ tiles, onSwipe }) => {
 
       {/* Dynamic Animated Tiles */}
       <div className="tiles-container">
-        {tiles.map((tile) => (
+        {sortedTiles.map((tile) => (
           <TileView key={tile.id} tile={tile} />
         ))}
       </div>
