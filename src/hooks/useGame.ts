@@ -26,6 +26,7 @@ export function useGame() {
   const [undoSnapshot, setUndoSnapshot] = useState<GameSnapshot | null>(null);
 
   const animationTimerRef = useRef<number | null>(null);
+  const pendingMergedTilesRef = useRef<Tile[] | null>(null);
 
   // Initialize board or restore from localStorage on mount
   useEffect(() => {
@@ -94,9 +95,12 @@ export function useGame() {
         animationTimerRef.current = null;
       }
 
-      // Prior to calculating next move, clean up:
-      // Remove any remaining deleted tiles and clear previous turn's animation flags
-      const currentCleanTiles = tiles
+      // If an animation from previous move was still running, finalize it immediately
+      const baseTiles = pendingMergedTilesRef.current || tiles;
+      pendingMergedTilesRef.current = null;
+
+      // Prior to calculating next move, clean up previous turn's animation flags
+      const currentCleanTiles = baseTiles
         .filter((t) => !t.deleted)
         .map((t) => ({
           ...t,
@@ -119,6 +123,7 @@ export function useGame() {
       }
 
       setUndoSnapshot(snapshot);
+      pendingMergedTilesRef.current = outcome.mergedTiles;
 
       // Sound and score
       if (outcome.scoreGained > 0) {
@@ -129,8 +134,8 @@ export function useGame() {
         sound.playMove();
       }
 
-      // Update tiles with sliding and new tiles
-      setTiles(outcome.tiles);
+      // Phase 1 (0ms): render sliding tiles immediately
+      setTiles(outcome.slidingTiles);
       setNextId(outcome.nextId);
 
       // Check win condition (2048 reached)
@@ -140,18 +145,19 @@ export function useGame() {
         fireWinConfetti();
       } else {
         // Check game over
-        const remainingMoves = canMove(outcome.tiles);
+        const remainingMoves = canMove(outcome.mergedTiles);
         if (!remainingMoves) {
           setStatus('GAME_OVER');
           sound.playGameOver();
         }
       }
 
-      // At exactly 100ms, sliding finishes:
-      // Remove ONLY the sliding deleted tiles. Crucially, do NOT reset isNew or isMerged here
-      // so their 200ms appear/pop animations continue playing smoothly to completion!
+      // Phase 2 (100ms): At impact, commit merged state seamlessly
+      // Absorbed tile is removed, destination tile smoothly upgrades to new value and swells
+      // like water droplets combining without any blinking or disappearance!
       animationTimerRef.current = window.setTimeout(() => {
-        setTiles((prev) => prev.filter((t) => !t.deleted));
+        setTiles(outcome.mergedTiles);
+        pendingMergedTilesRef.current = null;
         animationTimerRef.current = null;
       }, 100);
     },
@@ -170,6 +176,7 @@ export function useGame() {
       window.clearTimeout(animationTimerRef.current);
       animationTimerRef.current = null;
     }
+    pendingMergedTilesRef.current = null;
     const initial = initBoard();
     setTiles(initial.tiles);
     setNextId(initial.nextId);
@@ -187,6 +194,7 @@ export function useGame() {
       window.clearTimeout(animationTimerRef.current);
       animationTimerRef.current = null;
     }
+    pendingMergedTilesRef.current = null;
 
     setTiles(undoSnapshot.tiles);
     setScore(undoSnapshot.score);

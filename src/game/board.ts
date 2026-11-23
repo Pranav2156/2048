@@ -4,7 +4,8 @@ export const BOARD_SIZE = 4;
 
 export interface MoveOutcome {
   moved: boolean;
-  tiles: Tile[];
+  slidingTiles: Tile[];
+  mergedTiles: Tile[];
   scoreGained: number;
   nextId: number;
   has2048: boolean;
@@ -98,7 +99,8 @@ export function executeMove(
   let moved = false;
   let has2048 = false;
 
-  const resultTiles: Tile[] = [];
+  const slidingResult: Tile[] = [];
+  const mergedResult: Tile[] = [];
 
   // Determine iteration order based on direction
   const isHorizontal = direction === 'LEFT' || direction === 'RIGHT';
@@ -126,37 +128,13 @@ export function executeMove(
 
       // Check if current tile can merge with next tile
       if (next && current.value === next.value) {
-        // Merge happens at targetSecondary!
         const targetRow = isHorizontal ? primary : targetSecondary;
         const targetCol = isHorizontal ? targetSecondary : primary;
 
-        // Animate `current` sliding into target
-        if (current.row !== targetRow || current.col !== targetCol) {
+        if (current.row !== targetRow || current.col !== targetCol || next.row !== targetRow || next.col !== targetCol) {
           moved = true;
         }
-        resultTiles.push({
-          ...current,
-          row: targetRow,
-          col: targetCol,
-          deleted: true,
-          isNew: false,
-          isMerged: false,
-        });
 
-        // Animate `next` sliding into target
-        if (next.row !== targetRow || next.col !== targetCol) {
-          moved = true;
-        }
-        resultTiles.push({
-          ...next,
-          row: targetRow,
-          col: targetCol,
-          deleted: true,
-          isNew: false,
-          isMerged: false,
-        });
-
-        // Merged destination tile
         const mergedValue = current.value * 2;
         scoreGained += mergedValue;
         moved = true;
@@ -165,11 +143,31 @@ export function executeMove(
           has2048 = true;
         }
 
-        resultTiles.push({
-          id: nextId++,
-          value: mergedValue,
+        // Phase 1 (Sliding): current slides to target, next slides into target on top
+        slidingResult.push({
+          ...current,
           row: targetRow,
           col: targetCol,
+          isNew: false,
+          isMerged: false,
+        });
+
+        slidingResult.push({
+          ...next,
+          row: targetRow,
+          col: targetCol,
+          deleted: true,
+          isNew: false,
+          isMerged: false,
+        });
+
+        // Phase 2 (Fused): current retains its identity/DOM node and smoothly upgrades to mergedValue
+        // next is absorbed, preventing any blinking or disappearance
+        mergedResult.push({
+          ...current,
+          row: targetRow,
+          col: targetCol,
+          value: mergedValue,
           isMerged: true,
           isNew: false,
         });
@@ -186,13 +184,16 @@ export function executeMove(
           moved = true;
         }
 
-        resultTiles.push({
+        const movedTile: Tile = {
           ...current,
           row: targetRow,
           col: targetCol,
           isNew: false,
           isMerged: false,
-        });
+        };
+
+        slidingResult.push(movedTile);
+        mergedResult.push(movedTile);
 
         targetSecondary += step;
       }
@@ -203,23 +204,26 @@ export function executeMove(
   if (!moved) {
     return {
       moved: false,
-      tiles: currentTiles,
+      slidingTiles: currentTiles,
+      mergedTiles: currentTiles,
       scoreGained: 0,
       nextId: initialNextId,
       has2048: false,
     };
   }
 
-  // Spawn a new tile since move was successful
-  const spawnRes = spawnRandomTile(resultTiles, nextId);
+  // Spawn a new tile into the merged state
+  const spawnRes = spawnRandomTile(mergedResult, nextId);
   if (spawnRes.tile) {
-    resultTiles.push(spawnRes.tile);
+    mergedResult.push(spawnRes.tile);
+    slidingResult.push(spawnRes.tile);
     nextId = spawnRes.nextId;
   }
 
   return {
     moved: true,
-    tiles: resultTiles,
+    slidingTiles: slidingResult,
+    mergedTiles: mergedResult,
     scoreGained,
     nextId,
     has2048,
